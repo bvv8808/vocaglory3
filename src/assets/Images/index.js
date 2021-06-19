@@ -1,0 +1,1 @@
+exports.iconMain = require('./icon_main.png');
