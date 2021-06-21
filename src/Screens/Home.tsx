@@ -1,5 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 import React from 'react';
+import {useEffect} from 'react';
 import {
   StyleSheet,
   Text,

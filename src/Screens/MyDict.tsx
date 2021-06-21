@@ -141,8 +141,8 @@ const MyDictScreen = ({navigation}: prop) => {
                 goExam={() =>
                   navigation.push('Exam', {
                     words: curWords.map(word => ({
-                      voca: word.voca,
-                      mean: word.mean,
+                      voca: word.word.voca,
+                      mean: word.word.mean,
                     })),
                   })
                 }

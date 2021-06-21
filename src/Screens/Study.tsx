@@ -11,6 +11,9 @@ import {
 import Toast from 'react-native-simple-toast';
 import CustomHeader from '~/components/CustomHeader';
 import axios from 'axios';
+import {TSettings, TWord, TWordInDict} from '~/lib/types';
+import AsyncStorage from '@react-native-community/async-storage';
+import {getVocasInDict} from '~/lib/storage';
 // import db from '~/DB';
 
 interface prop {
@@ -20,7 +23,11 @@ interface prop {
 
 const StudyScreen = ({navigation, route}: prop) => {
   const [words, setWords] = useState(new Array());
-  const [curWord, setCurWord] = useState({voca: '', pronounce: '', mean: ''});
+  const [curWord, setCurWord] = useState<TWord>({
+    voca: '',
+    pronounce: '',
+    mean: '',
+  });
   const [curIdx, setCurIdx] = useState(-1);
   const [shownMean, setShownMean] = useState(false);
   // const [notShowInDict, setNotShowInDict] = useState(false);
@@ -28,47 +35,40 @@ const StudyScreen = ({navigation, route}: prop) => {
   useEffect(() => {
     let notShowInDict = false;
 
-    axios
-      .get(`https://vokaglorywords.firebaseio.com/${route.params.title}.json`)
-      .then(res => {
-        const words = res.data;
-        setWords(words);
-        setCurWord(words[0]);
+    AsyncStorage.getItem('settings')
+      .then(settings => {
+        if (settings) {
+          const s: TSettings = JSON.parse(settings);
+          notShowInDict = s.notShowWordInDict;
+        }
+        return AsyncStorage.getItem(route.params.title);
+      })
+      .then(cached => {
+        if (cached) {
+          return {
+            data: JSON.parse(cached),
+          };
+        } else
+          return axios.get(
+            `https://vokaglorywords.firebaseio.com/${route.params.title}.json`,
+          );
+      })
+
+      .then(async (words: any) => {
+        const existedVoca = await getVocasInDict();
+        return notShowInDict
+          ? words.data.filter((word: any) => !existedVoca.includes(word.voca))
+          : words.data;
+      })
+      .then((words: any) => {
+        const sortedWords = words.sort((a: any, b: any) => {
+          if (a.voca < b.voca) return -1;
+          else return 1;
+        });
+        setWords(sortedWords);
+        setCurWord(sortedWords[0]);
         setCurIdx(0);
       });
-
-    // db.getSettings()
-    //   .then((settings) => {
-    //     console.log('### settings ### ', typeof settings, settings);
-    //     // setNotShowInDict(settings.notShowWordInDict === 1 ? true : false);
-    //     notShowInDict = settings.notShowWordInDict === 1 ? true : false;
-    //   })
-    //   .then(() => db.getCachedWords(route.params.title))
-    //   .then((cachedWords: any) => {
-    //     console.log('## words.data ##', cachedWords);
-    //     if (cachedWords === null) {
-    //       return axios.get(
-    //         `https://vokaglorywords.firebaseio.com/${route.params.title}.json`,
-    //       );
-    //     } else return {data: JSON.parse(cachedWords.words)};
-    //   })
-    //   .then(async (words: any) => {
-    //     console.log('## notShowWordInDict ##', notShowInDict);
-    //     const existedVoca: any = await db.getDictByTitle(route.params.title);
-    //     return notShowInDict
-    //       ? words.data.filter((word: any) => !existedVoca.includes(word.voca))
-    //       : words.data;
-    //   })
-    //   .then((words: any) => {
-    //     // console.log('# WORDS #', typeof res.data, res.data[0].mean);
-    //     const sortedWords = words.sort((a: any, b: any) => {
-    //       if (a.voca < b.voca) return -1;
-    //       else return 1;
-    //     });
-    //     setWords(sortedWords);
-    //     setCurWord(sortedWords[0]);
-    //     setCurIdx(0);
-    //   });
   }, []);
 
   return (

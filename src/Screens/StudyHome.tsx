@@ -10,29 +10,23 @@ import {
   Platform,
   SafeAreaView,
   StatusBar,
+  FlatList,
 } from 'react-native';
 import Toast from 'react-native-simple-toast';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import CustomHeader from '~/components/CustomHeader';
 import rootData from '~/assets/roots';
 import axios from 'axios';
+import AsyncStorage from '@react-native-community/async-storage';
+import {TRoot} from '~/lib/types';
 // import db from '~/DB';
 AntDesign.loadFont();
 const screenWidth = Dimensions.get('screen').width;
 
-interface ChildProp {
-  id: number;
-  title: string;
+interface ChildProp extends TRoot {
   navigation: any;
-  rootVoca?: string;
-  changed?: string;
-  rootMean?: string;
-  bgColor?: string;
-  vocaColor?: string;
-  changedColor?: string;
-  meanColor?: string;
   isCached: boolean;
-  completedDownload: any;
+  onDownload: any;
 }
 
 const StudyButton = ({
@@ -47,7 +41,7 @@ const StudyButton = ({
   meanColor,
   navigation,
   isCached,
-  completedDownload,
+  onDownload,
 }: ChildProp) => {
   useEffect(() => {
     axios
@@ -86,32 +80,24 @@ const StudyButton = ({
         )}
       </TouchableOpacity>
       <TouchableOpacity
+        disabled={isCached}
         style={[s.btnSave, {backgroundColor: bgColor || '#CDCDCD'}]}
         onPressOut={() => {
-          // db.getTitlesInCachedWords()
-          //   .then((titles: any) => {
-          //     if (titles.includes(title)) {
-          //       Platform.OS === 'android'
-          //         ? ToastAndroid.show(
-          //             '이미 다운로드 되었습니다',
-          //             ToastAndroid.SHORT,
-          //           )
-          //         : Toast.show('이미 다운로드 되었습니다', Toast.SHORT);
-          //       return null;
-          //     } else
-          //       return axios.get(
-          //         `https://vokaglorywords.firebaseio.com/${title}.json`,
-          //       );
-          //   })
-          //   .then((res: any) => {
-          //     if (res !== null)
-          //       return db.cacheWords(title, JSON.stringify(res.data));
-          //     else return null;
-          //   })
-          //   .then((result: any) => {
-          //     console.log(typeof result, result);
-          //     if (result !== null) completedDownload(title);
-          //   });
+          AsyncStorage.getItem(title)
+            .then(cachedData => {
+              if (!cachedData)
+                return axios.get(
+                  `https://vokaglorywords.firebaseio.com/${title}.json`,
+                );
+            })
+            .then((res: any) => {
+              res.data &&
+                AsyncStorage.setItem(title, JSON.stringify(res.data)).then(
+                  () => {
+                    onDownload(title);
+                  },
+                );
+            });
         }}>
         <AntDesign
           name={isCached ? 'check' : 'download'}
@@ -139,6 +125,11 @@ const StudyHomeScreen = ({navigation}: prop) => {
 
   useEffect(() => {
     // db.getTitlesInCachedWords().then((titles: any) => setCachedTitle(titles));
+    AsyncStorage.getItem('cachedTitle').then(titles => {
+      if (titles) {
+        setCachedTitle(titles.split('/'));
+      }
+    });
   }, []);
 
   return (
@@ -146,7 +137,30 @@ const StudyHomeScreen = ({navigation}: prop) => {
       <StatusBar backgroundColor="#FBFBFB" />
       <View style={s.wrap}>
         <CustomHeader title="단어 공부" />
-        <ScrollView>
+        <View style={{flex: 1}}>
+          <FlatList
+            data={rootData}
+            renderItem={({item: root}: {item: TRoot; index: number}) => (
+              <StudyButton
+                id={root.id}
+                key={root.id}
+                title={root.title}
+                navigation={navigation}
+                rootVoca={root.rootVoca}
+                changed={root.changed}
+                rootMean={root.rootMean}
+                bgColor={root.bgColor}
+                vocaColor={root.vocaColor}
+                changedColor={root.changedColor}
+                meanColor={root.meanColor}
+                isCached={cachedTitle.includes(root.title)}
+                onDownload={updateState_cachedTitle}
+              />
+            )}
+            keyExtractor={(item: TRoot) => item.id.toString()}
+          />
+        </View>
+        {/* <ScrollView>
           <View
             style={{
               alignItems: 'center',
@@ -165,11 +179,11 @@ const StudyHomeScreen = ({navigation}: prop) => {
                 changedColor={root.changedColor}
                 meanColor={root.meanColor}
                 isCached={cachedTitle.includes(root.title)}
-                completedDownload={updateState_cachedTitle}
+                onDownload={updateState_cachedTitle}
               />
             ))}
           </View>
-        </ScrollView>
+        </ScrollView> */}
       </View>
     </SafeAreaView>
   );
@@ -182,6 +196,7 @@ const s = StyleSheet.create({
   },
   wordContainer: {
     width: '90%',
+    alignSelf: 'center',
     height: 150,
     flexDirection: 'row',
     alignItems: 'center',

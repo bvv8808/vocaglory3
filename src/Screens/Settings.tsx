@@ -14,33 +14,55 @@ import EvilIcons from 'react-native-vector-icons/EvilIcons';
 import {TouchableOpacity} from 'react-native-gesture-handler';
 // import db from '~/DB';
 import {TSettings} from '~/lib/types';
+import storage from '@react-native-community/async-storage';
 
 interface prop {
   navigation: any;
   route: any;
 }
 
-const SettingsScreen = () => {
+const SettingsScreen = ({navigation}: prop) => {
   const [isEnabled1, setIsEnabled1] = useState(false);
   const [isEnabled2, setIsEnabled2] = useState(false);
-  const toggleSwitch1 = () => {
-    // db.updateSetting1(!isEnabled1).then(() =>
-    //   setIsEnabled1((previousState: boolean) => !previousState),
-    // );
-  };
+  const toggleSwitch = (type: 'random' | 'nowShow') => {
+    switch (type) {
+      case 'random':
+        storage
+          .setItem(
+            'settings',
+            JSON.stringify({
+              isRandom: !isEnabled1,
+              notShowWordInDict: isEnabled2,
+            }),
+          )
+          .then(() => {
+            setIsEnabled1(v => !v);
+          });
 
-  const toggleSwitch2 = () => {
-    // db.updateSetting2(!isEnabled2).then(() =>
-    //   setIsEnabled2((previousState: boolean) => !previousState),
-    // );
+        break;
+      case 'nowShow':
+        storage
+          .setItem(
+            'settings',
+            JSON.stringify({
+              isRandom: isEnabled1,
+              notShowWordInDict: !isEnabled2,
+            }),
+          )
+          .then(() => {
+            setIsEnabled2(v => !v);
+          });
+    }
   };
 
   useEffect(() => {
-    // db.getSettings().then((setting) => {
-    //   console.log(setting.isRandom, setting.notShowWordInDict);
-    //   setIsEnabled1(setting.isRandom === 1 ? true : false);
-    //   setIsEnabled2(setting.notShowWordInDict === 1 ? true : false);
-    // });
+    storage.getItem('settings').then(settings => {
+      if (settings) {
+        const s: TSettings = JSON.parse(settings);
+        setIsEnabled1(s.isRandom);
+        setIsEnabled2(s.notShowWordInDict);
+      }
+    });
   }, []);
 
   return (
@@ -57,7 +79,9 @@ const SettingsScreen = () => {
               trackColor={{false: '#767577', true: '#81b0ff'}}
               thumbColor={isEnabled1 ? '#f5dd4b' : '#f4f3f4'}
               ios_backgroundColor="#3e3e3e"
-              onValueChange={toggleSwitch1}
+              onValueChange={() => {
+                toggleSwitch('random');
+              }}
               value={isEnabled1}
             />
           </View>
@@ -73,7 +97,9 @@ const SettingsScreen = () => {
               trackColor={{false: '#767577', true: '#81b0ff'}}
               thumbColor={isEnabled2 ? '#f5dd4b' : '#f4f3f4'}
               ios_backgroundColor="#3e3e3e"
-              onValueChange={toggleSwitch2}
+              onValueChange={() => {
+                toggleSwitch('nowShow');
+              }}
               value={isEnabled2}
             />
           </View>

@@ -17,10 +17,26 @@ import StudyScreen from '~/Screens/Study';
 import SettingsScreen from '~/Screens/Settings';
 import MyDictScreen from '~/Screens/MyDict';
 import ExamScreen from '~/Screens/Exam';
+import {useEffect} from 'react';
+import storage from '@react-native-community/async-storage';
 
 const Stack = createStackNavigator();
 
 const HomeStack = () => {
+  useEffect(() => {
+    // # 앱 최초 실행 시 settings 초기 값 세팅
+    storage.getItem('settings', settings => {
+      if (!settings) {
+        storage.setItem(
+          'settings',
+          JSON.stringify({
+            isRandom: true,
+            nowShowWordInDict: true,
+          }),
+        );
+      }
+    });
+  }, []);
   return (
     <Stack.Navigator
       initialRouteName="Home"
