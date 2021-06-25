@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import {iconMain} from '~/assets/Images';
+console.log(iconMain);
 
 const screenHeight = Dimensions.get('screen').height;
 

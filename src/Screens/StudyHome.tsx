@@ -91,12 +91,13 @@ const StudyButton = ({
                 );
             })
             .then((res: any) => {
-              res.data &&
+              if (res.data) {
                 AsyncStorage.setItem(title, JSON.stringify(res.data)).then(
                   () => {
                     onDownload(title);
                   },
                 );
+              }
             });
         }}>
         <AntDesign
@@ -121,6 +122,12 @@ const StudyHomeScreen = ({navigation}: prop) => {
     let copied = cachedTitle.slice();
     copied.push(newItem);
     setCachedTitle(copied);
+    AsyncStorage.getItem('cachedTitles').then(titles => {
+      AsyncStorage.setItem(
+        'cachedTitles',
+        titles ? titles + '/' + newItem : newItem,
+      );
+    });
   };
 
   useEffect(() => {

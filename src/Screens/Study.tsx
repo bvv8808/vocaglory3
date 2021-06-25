@@ -118,6 +118,48 @@ const StudyScreen = ({navigation, route}: prop) => {
           <TouchableOpacity
             style={s.btnAdd}
             onPressOut={() => {
+              // # 단어장에 추가
+              AsyncStorage.getItem('dict')
+                .then(dict => {
+                  if (dict) {
+                    const d: TWordInDict[] = JSON.parse(dict);
+                    return [
+                      !!d.find(w => w.word.voca === curWord.voca),
+                      d || [],
+                    ];
+                  }
+                  return [false, []];
+                })
+                .then((already: any) => {
+                  if (already[0]) {
+                    Toast.show('이미 단어장에 추가된 단어입니다', 0.7);
+                    return;
+                  }
+                  const now = new Date();
+
+                  let d = already[1];
+                  d.push({
+                    id: d.length ? d[d.length - 1].id + 1 : 0,
+                    pushedAt: `${now.getFullYear()}.${(now.getMonth() + 1)
+                      .toString()
+                      .padStart(2, '0')}.${now
+                      .getDate()
+                      .toString()
+                      .padStart(2, '0')}`,
+                    word: curWord,
+                    title: route.params.title,
+                    rootVoca: route.params.rootVoca,
+                  });
+
+                  return AsyncStorage.setItem('dict', JSON.stringify(d));
+                })
+                .then(() => {
+                  Toast.show('단어장에 추가되었습니다', 0.7);
+                })
+                .catch(e => {
+                  Toast.show('알 수 없는 오류가 발생했습니다', 1);
+                  console.error('Error (Add to Dict)', e);
+                });
               // db.isInDict(curWord.voca)
               //   .then((isExist: any) => {
               //     if (isExist) {

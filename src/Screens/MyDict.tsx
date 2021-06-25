@@ -16,6 +16,7 @@ import Entypo from 'react-native-vector-icons/Entypo';
 import CustomHeader from '~/components/CustomHeader';
 
 import {TWordInDict} from '~/lib/types';
+import AsyncStorage from '@react-native-community/async-storage';
 
 const screenWidth = Dimensions.get('screen').width;
 
@@ -26,7 +27,7 @@ interface prop {
 
 interface AccordianProp {
   curKey: string;
-  curWords: any;
+  curWords: TWordInDict[];
   goExam: any;
 }
 
@@ -46,11 +47,11 @@ const Accordian = ({curKey, curWords, goExam}: AccordianProp) => {
         </TouchableOpacity>
       </TouchableOpacity>
       <ScrollView style={[s.accordianBody, !opened && {height: 0}]}>
-        {curWords.map((word: any) => {
+        {curWords.map(word => {
           return (
-            <View key={word.voca} style={s.bodyContainer}>
-              <Text style={s.bodyVoca}>{word.voca}</Text>
-              <Text style={s.bodyMean}>{word.mean}</Text>
+            <View key={word.word.voca} style={s.bodyContainer}>
+              <Text style={s.bodyVoca}>{word.word.voca}</Text>
+              <Text style={s.bodyMean}>{word.word.mean}</Text>
             </View>
           );
         })}
@@ -65,30 +66,48 @@ const MyDictScreen = ({navigation}: prop) => {
   const [rootDict, setRootDict] = useState<any>({});
   const [dateKeys, setDateKeys] = useState<string[]>([]);
   const [rootKeys, setRootKeys] = useState<string[]>([]);
+  const [showingDict, setShowingDict] = useState<TWordInDict[]>([]);
+
+  const sortByDate = (a: TWordInDict, b: TWordInDict) => {
+    if (a.pushedAt < b.pushedAt) return -1;
+    else if (a.pushedAt === b.pushedAt) return 0;
+    else return 1;
+  };
+  const sortByRootVoca = (a: TWordInDict, b: TWordInDict) => {
+    if (a.rootVoca < b.rootVoca) return -1;
+    else if (a.rootVoca === b.rootVoca) return 0;
+    else return 1;
+  };
 
   useEffect(() => {
-    // db.getDict().then(dict => {
-    //   let initialDateDict: any = new Object();
-    //   let initialRootDict: any = new Object();
-    //   dict.forEach(word => {
-    //     if (initialDateDict.hasOwnProperty(word.pushedAt)) {
-    //       initialDateDict[word.pushedAt].push(word);
-    //     } else {
-    //       initialDateDict[word.pushedAt] = new Array();
-    //       initialDateDict[word.pushedAt].push(word);
-    //     }
-    //     if (initialRootDict.hasOwnProperty(word.rootVoca)) {
-    //       initialRootDict[word.rootVoca].push(word);
-    //     } else {
-    //       initialRootDict[word.rootVoca] = new Array();
-    //       initialRootDict[word.rootVoca].push(word);
-    //     }
-    //   });
-    //   setDateDict(initialDateDict);
-    //   setRootDict(initialRootDict);
-    //   setDateKeys(initialRootDict.keys().sort());
-    //   setRootKeys(initialRootDict.keys().sort());
-    // });
+    AsyncStorage.getItem('dict')
+      .then(strDict => {
+        console.log('@@@ dict ::', strDict);
+        if (strDict) {
+          const dict = JSON.parse(strDict);
+          return dict;
+        } else return [];
+      })
+      .then((dict: TWordInDict[]) => {
+        let initialDateDict: any = new Object();
+        let initialRootDict: any = new Object();
+        dict.forEach(word => {
+          if (initialDateDict.hasOwnProperty(word.pushedAt)) {
+            initialDateDict[word.pushedAt].push(word);
+          } else {
+            initialDateDict[word.pushedAt] = [word];
+          }
+          if (initialRootDict.hasOwnProperty(word.rootVoca)) {
+            initialRootDict[word.rootVoca].push(word);
+          } else {
+            initialRootDict[word.rootVoca] = [word];
+          }
+        });
+        setDateDict(initialDateDict);
+        setRootDict(initialRootDict);
+        setDateKeys(Object.keys(initialDateDict).sort());
+        setRootKeys(Object.keys(initialRootDict).sort());
+      });
   }, []);
 
   return (
@@ -134,6 +153,7 @@ const MyDictScreen = ({navigation}: prop) => {
             const curWords: TWordInDict[] = showByDate
               ? dateDict[k]
               : rootDict[k];
+            console.log('@@@@@@', item, curWords);
             return (
               <Accordian
                 curWords={curWords}
